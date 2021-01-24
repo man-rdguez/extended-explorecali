@@ -4,15 +4,15 @@ import com.example.ec.domain.Tour;
 import com.example.ec.domain.TourRating;
 import com.example.ec.repo.TourRatingRepository;
 import com.example.ec.repo.TourRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.OptionalDouble;
+import java.util.*;
 
 /**
  * Tour Rating Service
@@ -22,6 +22,7 @@ import java.util.OptionalDouble;
 @Service
 @Transactional
 public class TourRatingService {
+    private static final Logger LOGGER = LoggerFactory.getLogger( TourRatingService.class );
     private TourRatingRepository tourRatingRepository;
     private TourRepository tourRepository;
 
@@ -49,6 +50,26 @@ public class TourRatingService {
     public void createNew(int tourId, Integer customerId, Integer score, String comment) throws NoSuchElementException {
         tourRatingRepository.save(new TourRating(verifyTour(tourId), customerId,
                 score, comment));
+    }
+
+    /**
+     * Get a Rating by id.
+     *
+     * @param id rating identifier
+     * return TourRatings
+     */
+    public Optional<TourRating> lookupRatingById(int id ) {
+        return tourRatingRepository.findById( id );
+    }
+
+    /**
+     * Get All Ratings
+     *
+     * @return List of TourRatings
+     */
+    public List<TourRating> lookupAll() {
+        LOGGER.info( "Lookup all Ratings" );
+        return tourRatingRepository.findAll();
     }
 
     /**
@@ -132,11 +153,14 @@ public class TourRatingService {
      * @param customers
      */
     public void rateMany(int tourId,  int score, Integer [] customers) {
-        tourRepository.findById(tourId).ifPresent(tour -> {
-            for (Integer c : customers) {
-                tourRatingRepository.save(new TourRating(tour, c, score));
-            }
-        });
+        LOGGER.info( "Rate tour {} by customers {}", tourId, Arrays.asList( customers ).toString() );
+        Tour tour = tourRepository.findById( tourId )
+            .orElseThrow( () -> new NoSuchElementException() );
+
+        for ( Integer c : customers ) {
+            LOGGER.debug( "Attempt to create Tour Rating for customer {}", c );
+            tourRatingRepository.save( new TourRating( tour, c, score ) );
+        }
     }
 
     /**
